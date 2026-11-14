@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>অগ্রসর পারিবারিক সঞ্চয় সমিতি ও স্টোর</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Hind Siliguri -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS & html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .card-3d {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card-3d:hover { transform: translateY(-2px); }
+        .btn-3d {
+            box-shadow: 0 4px 0 #1e3a8a, 0 8px 15px rgba(30, 58, 138, 0.3);
+            transition: all 0.15s ease;
+        }
+        .btn-3d:active { transform: translateY(3px); box-shadow: 0 1px 0 #1e3a8a; }
+        .no-screenshot { user-select: none; -webkit-user-select: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- ==================== AUTH / SETUP SCREEN ==================== -->
+    <div id="authScreen" class="fixed inset-0 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 flex items-center justify-center p-4 z-50">
+        <div class="card-3d w-full max-w-md p-8 text-center">
+            <div class="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <i class="fas fa-landmark text-3xl text-blue-700"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-blue-900" id="authOrgName">অগ্রসর পারিবারিক সঞ্চয় সমিতি</h1>
+            <p class="text-xs text-gray-500 mb-6">স্থাপিত: 01-01-2019 | পরিচালক: ইয়াসিন আরাফাত</p>
+
+            <!-- Admin Setup -->
+            <div id="adminSetupBox" class="hidden text-left space-y-4">
+                <div class="bg-amber-50 border-l-4 border-amber-500 p-3 text-xs text-amber-800 rounded">
+                    প্রথমবার ব্যবহারের জন্য অ্যাডমিন অ্যাকাউন্ট তৈরি করুন। পাসওয়ার্ড অবশ্যই ৬ ডিজিটের হতে হবে।
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">অ্যাডমিন ইমেইল (ইউজারনেম)</label>
+                    <input type="email" id="setupEmail" placeholder="admin@example.com" class="w-full p-2.5 border rounded-lg outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">৬ ডিজিটের পাসওয়ার্ড</label>
+                    <input type="password" id="setupPass" maxlength="6" pattern="\d{6}" placeholder="123456" class="w-full p-2.5 border rounded-lg outline-none">
+                </div>
+                <button onclick="createAdmin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl btn-3d">
+                    অ্যাডমিন অ্যাকাউন্ট সম্পন্ন করুন
+                </button>
+            </div>
+
+            <!-- Login Box -->
+            <div id="loginBox" class="hidden text-left space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">লগইন ধরন</label>
+                    <select id="loginRole" class="w-full p-2.5 border rounded-lg bg-gray-50 font-semibold">
+                        <option value="admin">অ্যাডমিন (Admin)</option>
+                        <option value="user">ইউজার / মাঠকর্মী (User)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">ইমেইল অথবা মোবাইল নম্বর</label>
+                    <input type="text" id="loginUser" placeholder="ইমেইল বা মোবাইল লিখুন" class="w-full p-2.5 border rounded-lg outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">৬ ডিজিটের পাসওয়ার্ড</label>
+                    <input type="password" id="loginPass" maxlength="6" placeholder="পাসওয়ার্ড দিন" class="w-full p-2.5 border rounded-lg outline-none">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl btn-3d">
+                    প্রবেশ করুন <i class="fas fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APPLICATION ==================== -->
+    <div id="mainApp" class="hidden pb-20">
+        <!-- Top Header -->
+        <header class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white shadow-lg sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-3">
+                    <img id="headerLogo" src="https://via.placeholder.com/50/ffffff/1e3a8a?text=অগ্রসর" class="w-12 h-12 rounded-full object-cover border-2 border-white shadow">
+                    <div>
+                        <h1 class="text-lg md:text-xl font-bold leading-tight" id="headerOrgName">অগ্রসর পারিবারিক সঞ্চয় সমিতি</h1>
+                        <p class="text-xs text-blue-200" id="headerOrgMeta">স্থাপিত: 01-01-2019 | পরিচালক: ইয়াসিন আরাফাত</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="activeUserBadge" class="bg-blue-700 px-3 py-1 rounded-full text-xs font-semibold border border-blue-400"></span>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow">
+                        <i class="fas fa-sign-out-alt"></i> লগআউট
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quran Ayat Ticker -->
+            <div class="bg-indigo-950/80 text-amber-200 text-xs md:text-sm py-1.5 px-4 border-t border-indigo-700 flex items-center justify-between">
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span class="bg-amber-500 text-indigo-950 font-bold px-2 py-0.5 rounded text-[10px] shrink-0">আজকের আয়াত</span>
+                    <marquee id="quranAyatText" class="font-medium">লোড হচ্ছে...</marquee>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="max-w-7xl mx-auto px-4 mt-4">
+            <div class="flex overflow-x-auto gap-2 pb-2 no-scrollbar">
+                <button onclick="switchTab('dashboard')" class="nav-btn active bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap shadow"><i class="fas fa-chart-pie mr-1"></i> ড্যাশবোর্ড</button>
+                <button onclick="switchTab('members')" class="nav-btn bg-white text-gray-700 px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap shadow"><i class="fas fa-users mr-1"></i> গ্রাহক তালিকা</button>
+                <button onclick="switchTab('board')" class="nav-btn bg-white text-indigo-700 px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap shadow"><i class="fas fa-user-tie mr-1"></i> বোর্ড অব ডিরেক্টরি</button>
+                <button onclick="switchTab('newAccount')" class="nav-btn bg-white text-gray-700 px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap shadow"><i class="fas fa-user-plus mr-1"></i> নতুন একাউন্ট</button>
+                <button onclick="switchTab('transactions')" class="nav-btn bg-white text-gray-700 px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap shadow"><i class="fas fa-exchange-alt mr-1"></i> লেনদেন</button>
+                <button onclick="switchTab('store')" class="nav-btn bg-white text-purple-700 px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap shadow"><i class="fas fa-store mr-1"></i> সমিতি স্টোর</button>
+                <button onclick="switchTab('expenses')" class="nav-btn bg-white text-gray-700 px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap shadow"><i class="fas fa-file-invoice-dollar mr-1"></i> খরচ</button>
+                <button onclick="switchTab('adminPanel')" id="adminTabBtn" class="nav-btn bg-white text-gray-700 px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap shadow"><i class="fas fa-cogs mr-1"></i> অ্যাডমিন</button>
+            </div>
+        </nav>
+
+        <div id="reminderAlertArea" class="max-w-7xl mx-auto px-4 mt-3 space-y-2"></div>
+
+        <!-- ==================== TAB 1: DASHBOARD ==================== -->
+        <section id="tab-dashboard" class="tab-content max-w-7xl mx-auto px-4 mt-4 space-y-6">
+            <div class="card-3d p-4 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-1 min-w-[250px] relative">
+                    <input type="text" id="quickAccSearch" oninput="showDashboardSuggestions()" placeholder="একাউন্ট নম্বর, নাম বা মোবাইল দিয়ে খুঁজুন..." class="w-full pl-10 pr-10 py-2.5 border rounded-xl bg-gray-50 outline-none">
+                    <i class="fas fa-search absolute left-3.5 top-3.5 text-gray-400"></i>
+                    <div id="dashboardSuggestions" class="absolute left-0 right-0 top-12 bg-white border rounded-xl shadow-xl max-h-48 overflow-y-auto z-30 hidden"></div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="switchTab('newAccount')" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold btn-3d-green"><i class="fas fa-plus-circle mr-1"></i> নতুন একাউন্ট</button>
+                    <button onclick="switchTab('board')" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold btn-3d"><i class="fas fa-user-tie mr-1"></i> বোর্ড পরিচালনা</button>
+                </div>
+            </div>
+
+            <div id="quickSearchResult" class="hidden card-3d p-4 border-l-4 border-blue-600"></div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="card-3d p-4 border-b-4 border-blue-600">
+                    <p class="text-xs text-gray-500 font-semibold">মোট সেভিংস স্থিতি</p>
+                    <h3 class="text-xl md:text-2xl font-bold text-blue-800 mt-1" id="statTotalSavings">0 ৳</h3>
+                </div>
+                <div class="card-3d p-4 border-b-4 border-emerald-600">
+                    <p class="text-xs text-gray-500 font-semibold">মোট ডিপিএস জমা</p>
+                    <h3 class="text-xl md:text-2xl font-bold text-emerald-700 mt-1" id="statTotalDps">0 ৳</h3>
+                </div>
+                <div class="card-3d p-4 border-b-4 border-amber-500">
+                    <p class="text-xs text-gray-500 font-semibold">মাঠে লোন স্থিতি</p>
+                    <h3 class="text-xl md:text-2xl font-bold text-amber-700 mt-1" id="statTotalLoan">0 ৳</h3>
+                </div>
+                <div class="card-3d p-4 border-b-4 border-purple-600">
+                    <p class="text-xs text-gray-500 font-semibold">সমিতি স্টোর ফান্ড (৭০%)</p>
+                    <h3 class="text-xl md:text-2xl font-bold text-purple-700 mt-1" id="statStoreFund">0 ৳</h3>
+                </div>
+            </div>
+
+            <!-- AI Insights -->
+            <div class="card-3d p-5 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-indigo-600 text-white p-1.5 rounded-lg text-xs"><i class="fas fa-robot"></i> AI স্মার্ট বিশ্লেষণ</span>
+                    <h3 class="font-bold text-indigo-950">সামগ্রিক লেনদেন ও বোর্ড অবস্থা</h3>
+                </div>
+                <p id="aiInsightText" class="text-sm text-gray-700 leading-relaxed"></p>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: MEMBERS LIST ==================== -->
+        <section id="tab-members" class="tab-content hidden max-w-7xl mx-auto px-4 mt-4">
+            <div class="card-3d p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <h2 class="text-lg font-bold text-blue-900">সকল গ্রাহকের তালিকা (ডিরেক্টর ট্যাগসহ)</h2>
+                    <input type="text" id="memberFilterInput" onkeyup="renderMembersTable()" placeholder="নাম বা একাউন্ট নং..." class="px-3 py-1.5 border rounded-lg text-sm">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-blue-900 text-white">
+                                <th class="p-3">একাউন্ট নং</th>
+                                <th class="p-3">নাম ও পদবী</th>
+                                <th class="p-3">মোবাইল</th>
+                                <th class="p-3">সেভিংস জমা</th>
+                                <th class="p-3 text-right">প্রোফাইল</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersTableBody" class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: BOARD OF DIRECTORS ==================== -->
+        <section id="tab-board" class="tab-content hidden max-w-6xl mx-auto px-4 mt-4 space-y-6">
+            <div class="card-3d p-6">
+                <h2 class="text-xl font-bold text-indigo-900 mb-2 border-b pb-2"><i class="fas fa-user-tie mr-2"></i>বোর্ড অব ডিরেক্টরি পরিচালনা (১ বছর মেয়াদী)</h2>
+                <p class="text-xs text-gray-500 mb-4">সমিতির এডমিন স্বয়ংক্রিয়ভাবে 'সভাপতি'। গ্রাহকদের ভেতর থেকে সর্বনিম্ন ৫ জন বা ততোধিক সদস্যকে ডিরেক্টর হিসেবে যুক্ত করতে পারবেন।</p>
+
+                <!-- Assign Director Form -->
+                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                    <div>
+                        <label class="font-semibold text-xs block mb-1">গ্রাহক নির্বাচন করুন (একাউন্ট নং বা নাম)</label>
+                        <select id="boardMemberSelect" class="w-full p-2.5 border rounded-lg text-sm font-semibold"></select>
+                    </div>
+                    <div>
+                        <label class="font-semibold text-xs block mb-1">বোর্ডের পদবী</label>
+                        <select id="boardRoleSelect" class="w-full p-2.5 border rounded-lg text-sm font-semibold">
+                            <option value="সহ-সভাপতি">সহ-সভাপতি (Vice-President)</option>
+                            <option value="সাধারণ সম্পাদক">সাধারণ সম্পাদক (General Secretary)</option>
+                            <option value="কোষাধ্যক্ষ">কোষাধ্যক্ষ (Treasurer)</option>
+                            <option value="কার্যনির্বাহী পরিচালক">কার্যনির্বাহী পরিচালক (Executive Director)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="assignDirector()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm shadow">ডিরেক্টর হিসেবে যুক্ত করুন</button>
+                    </div>
+                </div>
+
+                <!-- Board Members Table -->
+                <h3 class="font-bold text-indigo-900 mb-3">বর্তমান পরিচালনা পর্ষদ (বোর্ড মেম্বারগণ)</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-indigo-900 text-white">
+                                <th class="p-3">একাউন্ট নং</th>
+                                <th class="p-3">নাম</th>
+                                <th class="p-3">বোর্ডের পদবী</th>
+                                <th class="p-3">মেয়াদকাল</th>
+                                <th class="p-3 text-right">অ্যাকশন (বাতিল)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boardTableBody" class="divide-y"></tbody>
+                    </table>
+                </div>
+
+                <!-- Bulk Allowance (সম্মানী) Section -->
+                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-300 space-y-3">
+                    <h3 class="font-bold text-emerald-900 text-base"><i class="fas fa-hand-holding-usd mr-1"></i> লাভ থেকে ডিরেক্টরদের সম্মিলিত সম্মানী (ভাতা) প্রদান</h3>
+                    <p class="text-xs text-gray-600">বোর্ড সদস্যদের জন্য নির্ধারিত লাভ বা তহবিল থেকে একসাথে সম্মানী প্রদান করতে নিচের ঘরে পরিমাণ লিখে প্রদান করুন।</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input type="number" id="boardAllowanceAmount" placeholder="প্রত্যেককে কত টাকা করে সম্মানী?" class="p-2.5 border rounded-lg text-sm font-bold">
+                        <button onclick="payBoardAllowance()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm shadow">সকল ডিরেক্টরকে একসাথে সম্মানী প্রদান করুন</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: NEW ACCOUNT ==================== -->
+        <section id="tab-newAccount" class="tab-content hidden max-w-4xl mx-auto px-4 mt-4">
+            <div class="card-3d p-6">
+                <h2 class="text-xl font-bold text-blue-900 mb-4 border-b pb-2"><i class="fas fa-user-plus mr-2"></i>নতুন গ্রাহক একাউন্ট খুলুন</h2>
+                <form id="newAccountForm" onsubmit="saveNewAccount(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <label class="font-semibold block mb-1">ইউনিক একাউন্ট নম্বর (সর্বোচ্চ ৫ ঘর) *</label>
+                        <input type="text" id="accNo" required maxlength="5" placeholder="যেমন: 1001" class="w-full p-2.5 border rounded-lg bg-blue-50 font-bold">
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-1">ক্যাটাগরি *</label>
+                        <select id="accCategory" class="w-full p-2.5 border rounded-lg">
+                            <option value="পারিবারিক">পারিবারিক সেভিংস</option>
+                            <option value="স্টুডেন্ট">স্টুডেন্ট সেভিংস</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-1">গ্রাহকের নাম *</label>
+                        <input type="text" id="accName" required class="w-full p-2.5 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-1">পিতার নাম</label>
+                        <input type="text" id="accFather" class="w-full p-2.5 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-1">মাতার নাম</label>
+                        <input type="text" id="accMother" class="w-full p-2.5 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-1">মোবাইল নম্বর *</label>
+                        <input type="tel" id="accPhone" required class="w-full p-2.5 border rounded-lg">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="font-semibold block mb-1">ঠিকানা</label>
+                        <input type="text" id="accAddress" class="w-full p-2.5 border rounded-lg">
+                    </div>
+                    <div class="md:col-span-2 pt-2">
+                        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl btn-3d">একাউন্ট সংরক্ষণ করুন</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 5: TRANSACTIONS ==================== -->
+        <section id="tab-transactions" class="tab-content hidden max-w-5xl mx-auto px-4 mt-4 space-y-6">
+            <div class="card-3d p-6">
+                <h2 class="text-xl font-bold text-blue-900 mb-4 border-b pb-2"><i class="fas fa-exchange-alt mr-2"></i>লেনদেন এন্ট্রি</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 relative">
+                    <div>
+                        <label class="font-semibold text-sm block mb-1">একাউন্ট নম্বর / মোবাইল / নাম *</label>
+                        <input type="text" id="txAccNo" oninput="showTxSuggestions()" placeholder="নম্বর বা নাম..." class="w-full p-2.5 border-2 border-blue-400 rounded-lg font-bold outline-none">
+                        <div id="txSuggestions" class="absolute left-0 right-0 top-16 bg-white border rounded-xl shadow-2xl max-h-48 overflow-y-auto z-30 hidden"></div>
+                    </div>
+                    <div id="txMemberPreview" class="md:col-span-2 bg-blue-50 p-3 rounded-xl border border-blue-200 text-sm hidden"></div>
+                </div>
+
+                <form onsubmit="processTransaction(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <label class="font-semibold block mb-1">লেনদেনের ধরন *</label>
+                        <select id="txType" class="w-full p-2.5 border rounded-lg font-semibold bg-gray-50">
+                            <option value="deposit">সেভিংস জমা</option>
+                            <option value="withdraw">সেভিংস উত্তোলন</option>
+                            <option value="dps_deposit">ডিপিএস কিস্তি জমা</option>
+                            <option value="fine">ফাইন / জরিমানা</option>
+                            <option value="donation">ডোনেশন</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-1">তারিখ</label>
+                        <input type="date" id="txDate" required class="w-full p-2.5 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-1">পরিমাণ (টাকা) *</label>
+                        <input type="number" id="txAmount" required min="1" placeholder="0" class="w-full p-2.5 border rounded-lg font-bold text-lg text-blue-900">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="font-semibold block mb-1">মন্তব্য</label>
+                        <input type="text" id="txNote" placeholder="বর্ণনা..." class="w-full p-2.5 border rounded-lg">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-xl">লেনদেন সম্পন্ন করুন</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 6: STORE ==================== -->
+        <section id="tab-store" class="tab-content hidden max-w-7xl mx-auto px-4 mt-4 space-y-6">
+            <div class="card-3d p-5">
+                <h3 class="text-lg font-bold text-purple-900 mb-3 border-b pb-2"><i class="fas fa-store mr-1"></i> সমিতি স্টোর ও স্টক ম্যানেজমেন্ট</h3>
+                <p class="text-xs text-gray-600 mb-4">স্টোর বিক্রির লাভ ৩০% সমিতির তহবিলে এবং ৭০% স্টোর ফান্ডে জমা হয়।</p>
+                <div class="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <p class="text-sm font-semibold">স্টোর ফান্ড স্থিতি: <span id="displayStoreFund" class="text-purple-800 font-bold text-lg">0 ৳</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 7: EXPENSES ==================== -->
+        <section id="tab-expenses" class="tab-content hidden max-w-6xl mx-auto px-4 mt-4">
+            <div class="card-3d p-5">
+                <h3 class="text-lg font-bold text-red-700 border-b pb-2"><i class="fas fa-receipt mr-1"></i> খরচ ইনপুট</h3>
+                <form onsubmit="addExpense(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mt-3">
+                    <input type="text" id="expTitle" required placeholder="খরচের বিবরণ (যেমন: ভাড়া)" class="p-2 border rounded-lg">
+                    <input type="number" id="expAmount" required placeholder="টাকা" class="p-2 border rounded-lg">
+                    <button type="submit" class="bg-red-600 text-white font-bold py-2 rounded-lg">খরচ যোগ করুন</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 8: ADMIN ==================== -->
+        <section id="tab-adminPanel" class="tab-content hidden max-w-7xl mx-auto px-4 mt-4">
+            <div class="card-3d p-5 text-sm space-y-4">
+                <h3 class="text-lg font-bold text-blue-900 border-b pb-2"><i class="fas fa-database mr-1"></i> ব্যাকআপ ও এক্সেল</h3>
+                <button onclick="downloadBackup()" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">ব্যাকআপ সেভ (.json)</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- ==================== PROFILE MODAL ==================== -->
+    <div id="profileModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-3 z-50">
+        <div class="bg-white rounded-2xl max-w-xl w-full p-5 shadow-2xl">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-lg font-bold text-blue-900">গ্রাহক প্রোফাইল</h3>
+                <button onclick="closeProfileModal()" class="bg-gray-200 px-3 py-1 rounded text-xs font-bold">✕ বন্ধ</button>
+            </div>
+            <div class="space-y-2 text-sm" id="profileModalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const DB_KEY = 'agrosor_somiti_board_db_v3';
+        let db = JSON.parse(localStorage.getItem(DB_KEY)) || {
+            admin: null,
+            members: [], // { accNo, name, father, mother, phone, address, category, status, savings, dps, loan }
+            board: [], // { accNo, name, role, assignedDate, expiryDate }
+            transactions: [],
+            storeFund: 0,
+            expenses: []
+        };
+
+        function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+        window.onload = () => {
+            if (!db.admin) {
+                document.getElementById('adminSetupBox').classList.remove('hidden');
+            } else {
+                document.getElementById('loginBox').classList.remove('hidden');
+            }
+        };
+
+        function createAdmin() {
+            const email = document.getElementById('setupEmail').value.trim();
+            const pass = document.getElementById('setupPass').value.trim();
+            if (!email || !/^\d{6}$/.test(pass)) return alert('সঠিক ইমেইল ও ৬ ডিজিটের পাসওয়ার্ড দিন!');
+            db.admin = { email, pass };
+            saveDB();
+            alert('অ্যাডমিন তৈরি সফল!');
+            location.reload();
+        }
+
+        function handleLogin() {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            if (db.admin && user === db.admin.email && pass === db.admin.pass) {
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('activeUserBadge').innerText = 'ইয়াসিন আরাফাত (সভাপতি & Admin)';
+                refreshAllUI();
+            } else {
+                alert('ইমেইল বা পাসওয়ার্ড ভুল!');
+            }
+        }
+
+        function logout() { location.reload(); }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-700', 'text-white');
+                btn.classList.add('bg-white', 'text-gray-700');
+            });
+            event.currentTarget.classList.remove('bg-white', 'text-gray-700');
+            event.currentTarget.classList.add('bg-blue-700', 'text-white');
+            refreshAllUI();
+        }
+
+        // ==================== NEW ACCOUNT ====================
+        function saveNewAccount(e) {
+            e.preventDefault();
+            const accNo = document.getElementById('accNo').value.trim();
+            if (db.members.some(m => m.accNo === accNo)) return alert('একাউন্ট ইতিমধ্যে আছে!');
+            
+            db.members.push({
+                accNo,
+                category: document.getElementById('accCategory').value,
+                name: document.getElementById('accName').value.trim(),
+                father: document.getElementById('accFather').value.trim(),
+                mother: document.getElementById('accMother').value.trim(),
+                phone: document.getElementById('accPhone').value.trim(),
+                address: document.getElementById('accAddress').value.trim(),
+                status: 'active',
+                savings: 0, dps: 0, loan: null
+            });
+            saveDB();
+            alert('একাউন্ট খোলা সফল!');
+            e.target.reset();
+            refreshAllUI();
+        }
+
+        // ==================== BOARD OF DIRECTORS ====================
+        function assignDirector() {
+            const accNo = document.getElementById('boardMemberSelect').value;
+            const role = document.getElementById('boardRoleSelect').value;
+            const m = db.members.find(x => x.accNo === accNo);
+            if (!m) return alert('গ্রাহক পাওয়া যায়নি!');
+
+            if (db.board.some(b => b.accNo === accNo)) return alert('এই সদস্য ইতিমধ্যে বোর্ডে ডিরেক্টর হিসেবে আছেন!');
+
+            const today = new Date();
+            const expiry = new Date();
+            expiry.setFullYear(today.getFullYear() + 1); // 1 year term
+
+            db.board.push({
+                accNo,
+                name: m.name,
+                role,
+                assignedDate: today.toISOString().split('T')[0],
+                expiryDate: expiry.toISOString().split('T')[0]
+            });
+            saveDB();
+            alert(`${m.name} কে সফলভাবে ${role} হিসেবে বোর্ডে যুক্ত করা হয়েছে!`);
+            refreshAllUI();
+        }
+
+        function removeDirector(accNo) {
+            if (!confirm('এই ডিরেক্টরকে পর্ষদ থেকে বাতিল করবেন?')) return;
+            db.board = db.board.filter(b => b.accNo !== accNo);
+            saveDB();
+            alert('ডিরেক্টর পদ বাতিল করা হয়েছে। এখন নতুন কাউকে মনোনয়ন দিতে পারবেন।');
+            refreshAllUI();
+        }
+
+        function payBoardAllowance() {
+            const amount = Number(document.getElementById('boardAllowanceAmount').value);
+            if (!amount || amount <= 0) return alert('সঠিক সম্মാനির পরিমাণ দিন!');
+            if (db.board.length === 0) return alert('বোর্ডে কোনো ডিরেক্টর নেই!');
+
+            const today = new Date().toISOString().split('T')[0];
+            let totalPaid = 0;
+
+            db.board.forEach(b => {
+                const m = db.members.find(x => x.accNo === b.accNo);
+                if (m) {
+                    m.savings += amount; // Adding allowance directly to their savings or fund
+                    totalPaid += amount;
+                    db.transactions.push({
+                        id: Date.now() + Math.random(),
+                        accNo: b.accNo,
+                        type: 'allowance',
+                        date: today,
+                        amount,
+                        note: `বোর্ড ডিরেক্টর সম্মানী (${b.role})`,
+                        by: 'System Board'
+                    });
+                }
+            });
+
+            saveDB();
+            alert(`সকল ডিরেক্টরকে মোট ${totalPaid} ৳ সম্মানী প্রদান করা হয়েছে!`);
+            document.getElementById('boardAllowanceAmount').value = '';
+            refreshAllUI();
+        }
+
+        // ==================== TRANSACTIONS ====================
+        function showTxSuggestions() {
+            const q = document.getElementById('txAccNo').value.trim().toLowerCase();
+            const box = document.getElementById('txSuggestions');
+            if (!q) { box.classList.add('hidden'); return; }
+            const matches = db.members.filter(m => m.accNo.includes(q) || m.name.toLowerCase().includes(q));
+            if (!matches.length) { box.classList.add('hidden'); return; }
+            box.classList.remove('hidden');
+            box.innerHTML = matches.map(m => `
+                <div onclick="selectTxMember('${m.accNo}')" class="p-2.5 hover:bg-blue-50 cursor-pointer border-b text-xs flex justify-between">
+                    <span><strong>A/C: ${m.accNo}</strong> - ${m.name}</span>
+                </div>
+            `).join('');
+        }
+
+        function selectTxMember(accNo) {
+            document.getElementById('txAccNo').value = accNo;
+            document.getElementById('txSuggestions').classList.add('hidden');
+        }
+
+        function processTransaction(e) {
+            e.preventDefault();
+            const accNo = document.getElementById('txAccNo').value.trim();
+            const m = db.members.find(x => x.accNo === accNo);
+            if (!m) return alert('সঠিক একাউন্ট দিন!');
+            const amount = Number(document.getElementById('txAmount').value);
+            const type = document.getElementById('txType').value;
+
+            if (type === 'deposit') m.savings += amount;
+            else if (type === 'withdraw') m.savings -= amount;
+            else if (type === 'dps_deposit') m.dps += amount;
+
+            db.transactions.push({ id: Date.now(), accNo, type, date: document.getElementById('txDate').value, amount, by: 'Admin' });
+            saveDB();
+            alert('লেনদেন সম্পন্ন!');
+            e.target.reset();
+            refreshAllUI();
+        }
+
+        function addExpense(e) {
+            e.preventDefault();
+            db.expenses.push({ title: document.getElementById('expTitle').value, amount: Number(document.getElementById('expAmount').value) });
+            saveDB();
+            alert('খরচ যুক্ত হয়েছে!');
+            e.target.reset();
+        }
+
+        function downloadBackup() {
+            const blob = new Blob([JSON.stringify(db)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Agrosor_Backup.json`;
+            a.click();
+        }
+
+        // ==================== UI REFRESH ====================
+        function refreshAllUI() {
+            const totalSav = db.members.reduce((s, m) => s + m.savings, 0);
+            const totalDps = db.members.reduce((s, m) => s + m.dps, 0);
+            document.getElementById('statTotalSavings').innerText = totalSav + ' ৳';
+            document.getElementById('statTotalDps').innerText = totalDps + ' ৳';
+            document.getElementById('statStoreFund').innerText = db.storeFund + ' ৳';
+            document.getElementById('displayStoreFund').innerText = db.storeFund + ' ৳';
+
+            // Board Member Select Dropdown
+            document.getElementById('boardMemberSelect').innerHTML = db.members.map(m => `
+                <option value="${m.accNo}">A/C: ${m.accNo} - ${m.name}</option>
+            `).join('');
+
+            // Board Table (Including Admin President at top)
+            let boardHtml = `
+                <tr class="bg-blue-50 font-bold">
+                    <td class="p-3">Admin</td>
+                    <td class="p-3">ইয়াসিন আরাফাত (পরিচালক)</td>
+                    <td class="p-3 text-blue-700">সভাপতি (President)</td>
+                    <td class="p-3">স্থায়ী</td>
+                    <td class="p-3 text-right">প্রধান</td>
+                </tr>
+            `;
+            boardHtml += db.board.map(b => `
+                <tr>
+                    <td class="p-3">${b.accNo}</td>
+                    <td class="p-3 font-semibold">${b.name}</td>
+                    <td class="p-3 text-indigo-700">${b.role}</td>
+                    <td class="p-3 text-xs text-gray-500">${b.assignedDate} হতে ${b.expiryDate}</td>
+                    <td class="p-3 text-right"><button onclick="removeDirector('${b.accNo}')" class="bg-red-500 text-white px-2 py-1 rounded text-xs">বাতিল করুন</button></td>
+                </tr>
+            `).join('');
+            document.getElementById('boardTableBody').innerHTML = boardHtml;
+
+            // Members Table with Director Tag
+            document.getElementById('membersTableBody').innerHTML = db.members.map(m => {
+                const dir = db.board.find(b => b.accNo === m.accNo);
+                const badge = dir ? `<span class="bg-indigo-100 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full font-bold ml-2">ডিরেক্টর (${dir.role})</span>` : '';
+                return `
+                    <tr class="hover:bg-blue-50">
+                        <td class="p-3 font-bold">${m.accNo}</td>
+                        <td class="p-3">${m.name} ${badge}</td>
+                        <td class="p-3">${m.phone}</td>
+                        <td class="p-3 font-bold text-blue-700">${m.savings} ৳</td>
+                        <td class="p-3 text-right"><button onclick="openProfile('${m.accNo}')" class="bg-blue-600 text-white px-3 py-1 rounded text-xs">প্রোফাইল</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openProfile(accNo) {
+            const m = db.members.find(x => x.accNo === accNo);
+            const dir = db.board.find(b => b.accNo === accNo);
+            document.getElementById('profileModalContent').innerHTML = `
+                <p><strong>একাউন্ট নং:</strong> ${m.accNo}</p>
+                <p><strong>নাম:</strong> ${m.name} ${dir ? `<span class="text-indigo-600 font-bold">(ডিরেক্টর: ${dir.role})</span>` : ''}</p>
+                <p><strong>মোবাইল:</strong> ${m.phone}</p>
+                <p><strong>সেভিংস জমা:</strong> ${m.savings} ৳</p>
+                <p><strong>ডিপিএস জমা:</strong> ${m.dps} ৳</p>
+            `;
+            document.getElementById('profileModal').classList.remove('hidden');
+            document.getElementById('profileModal').classList.add('flex');
+        }
+        function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
+    </script>
+</body>
+</html>
